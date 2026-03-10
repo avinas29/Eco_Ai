@@ -63,9 +63,9 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
         const { createRoot } = ReactDOM;
-        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation, Navigate } = ReactRouterDOM;
 
-        // --- Common Components ---
+        // --- Common Components & Auth ---
 
         const ThemeToggle = () => {
             const [dark, setDark] = useState(false);
@@ -81,7 +81,141 @@
             );
         };
 
-        const Header = ({ title = "GramUrja-AI", activeTab = "" }) => {
+        const ProtectedRoute = ({ element }) => {
+            const isAuthed = typeof window !== "undefined" && localStorage.getItem("auth") === "true";
+            return isAuthed ? element : <Navigate to="/login" replace />;
+        };
+
+        const LoginPage = () => {
+            const navigate = useNavigate();
+            const [email, setEmail] = useState("");
+            const [password, setPassword] = useState("");
+            const [error, setError] = useState("");
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setError("");
+                setLoading(true);
+                setTimeout(() => {
+                    const ok = email.includes("@") && password.length >= 4;
+                    if (ok) {
+                        localStorage.setItem("auth", "true");
+                        setLoading(false);
+                        navigate("/", { replace: true });
+                    } else {
+                        setLoading(false);
+                        setError("Invalid email or password. Please try again.");
+                    }
+                }, 700);
+            };
+
+            return (
+                <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 px-4">
+                    <div class="relative max-w-md w-full">
+                        <div class="absolute -inset-[1px] bg-gradient-to-r from-primary to-cyan-400 opacity-60 blur-lg rounded-3xl"></div>
+                        <div class="relative bg-white/10 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl p-8 space-y-6">
+                            <div class="text-center space-y-2">
+                                <h1 class="text-3xl font-extrabold tracking-tight text-white">GramUrja-AI</h1>
+                                <p class="text-slate-200 text-sm">Smart Energy Intelligence Platform</p>
+                            </div>
+                            <form class="space-y-4" onSubmit={handleSubmit}>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-200">Email</label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        class="w-full rounded-xl border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        placeholder="you@example.com"
+                                        required
+                                    />
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-200">Password</label>
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        class="w-full rounded-xl border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                </div>
+                                {error && (
+                                    <p class="text-xs text-red-300 bg-red-900/40 border border-red-500/40 rounded-lg px-3 py-2">
+                                        {error}
+                                    </p>
+                                )}
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    class="w-full inline-flex items-center justify-center rounded-xl bg-primary text-white text-sm font-semibold py-2.5 mt-2 shadow-lg shadow-primary/30 hover:bg-primary/90 disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {loading ? "Signing in..." : "Login"}
+                                </button>
+                            </form>
+                            <p class="text-[11px] text-slate-300/90 text-center">
+                                Demo login accepts any email and password with at least 4 characters.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Header = () => {
+            const navigate = useNavigate();
+            const [notifications, setNotifications] = useState([]);
+            const [hasNew, setHasNew] = useState(false);
+            const [open, setOpen] = useState(false);
+            const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+            useEffect(() => {
+                let cancelled = false;
+                const fetchRecommendation = () => {
+                    fetch("http://127.0.0.1:8001/ai-recommendation")
+                        .then((r) => r.json())
+                        .then((data) => {
+                            if (cancelled) return;
+                            if (data && data.id) {
+                                const idStr = String(data.id);
+                                const lastId = localStorage.getItem("lastAiRecId");
+                                if (data.alert && idStr !== lastId) {
+                                    const notif = {
+                                        id: data.id,
+                                        device: data.device,
+                                        reason: data.reason,
+                                        estimated_savings: data.estimated_savings,
+                                        action: data.action,
+                                        timestamp: new Date().toLocaleTimeString(),
+                                    };
+                                    setNotifications((prev) => [notif, ...prev].slice(0, 5));
+                                    setHasNew(true);
+                                    localStorage.setItem("lastAiRecId", idStr);
+                                }
+                            }
+                        })
+                        .catch(() => {});
+                };
+                fetchRecommendation();
+                const interval = setInterval(fetchRecommendation, 60000);
+                return () => {
+                    cancelled = true;
+                    clearInterval(interval);
+                };
+            }, []);
+
+            const handleLogout = () => {
+                localStorage.removeItem("auth");
+                navigate("/login", { replace: true });
+            };
+
+            const goToScheduling = () => {
+                setOpen(false);
+                navigate("/scheduling");
+            };
+
             return (
                 <header class="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-6 lg:px-10 py-3 flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -95,22 +229,92 @@
                             <span class="material-symbols-outlined text-sm text-green-500">check_circle</span>
                             <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">System Online</span>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 relative">
                             <ThemeToggle />
-                            <button class="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                                <span class="material-symbols-outlined">notifications</span>
-                            </button>
+                            <div class="relative">
+                                <button
+                                    class="relative p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                                    onClick={() => {
+                                        setOpen((o) => !o);
+                                        setHasNew(false);
+                                    }}
+                                >
+                                    <span class="material-symbols-outlined">notifications</span>
+                                    {hasNew && (
+                                        <span class="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 border border-white"></span>
+                                    )}
+                                </button>
+                                {open && (
+                                    <div class="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-20">
+                                        <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                            <p class="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                                                AI Recommendations
+                                            </p>
+                                            {notifications.length > 0 && (
+                                                <span class="text-[10px] text-slate-400">
+                                                    {notifications.length} new
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div class="max-h-64 overflow-y-auto">
+                                            {notifications.length === 0 ? (
+                                                <div class="px-4 py-6 text-xs text-slate-500 dark:text-slate-400 text-center">
+                                                    No new recommendations.
+                                                </div>
+                                            ) : (
+                                                notifications.map((n) => (
+                                                    <div key={n.id} class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
+                                                        <p class="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-1">
+                                                            <span class="material-symbols-outlined text-xs text-amber-500">bolt</span>
+                                                            Device: {n.device}
+                                                        </p>
+                                                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                            {n.reason}
+                                                        </p>
+                                                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-semibold">
+                                                            Estimated savings: {n.estimated_savings}
+                                                        </p>
+                                                        <div class="mt-2 flex items-center justify-between">
+                                                            <span class="text-[10px] text-slate-400">{n.timestamp}</span>
+                                                            <button
+                                                                onClick={goToScheduling}
+                                                                class="text-[11px] font-semibold text-primary hover:underline"
+                                                            >
+                                                                View Details
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                             <Link to="/settings" class="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                                 <span class="material-symbols-outlined">settings</span>
                             </Link>
                             <div class="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2"></div>
-                            <div class="flex items-center gap-3 pl-2">
+                            <div class="relative flex items-center gap-3 pl-2">
                                 <div class="text-right hidden sm:block">
                                     <p class="text-sm font-semibold text-slate-900 dark:text-white leading-none">Alex Rivera</p>
                                     <p class="text-[11px] text-slate-500 font-medium">Home Pro Plan</p>
                                 </div>
-                                <div class="h-10 w-10 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden bg-cover bg-center" style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD-WxgsuWPBjP0OP1xPeBftqYVS66rEp8xTB29WpwPzWvxYjcsALZWkeHWIqMYDnUY812qlFqBAMr8adRRKsYa67ljK9TrO-iB3lLHlSzqCv8ofNqAstmITJjCpdaMpeLbeBSxm5ZdHj026qjrfbMl5F1w6YXMyQbeSwfU80M38CqneVT-JSLySMmXaTibN6FzJhz5A5oz7E-30tuqLyZpZDZHwf6Dlq6_KatwLlKM4CysS2JKmLgeE6bCv3EENwjqvL719iKwxjD6A')"}}>
-                                </div>
+                                <button
+                                    onClick={() => setShowProfileMenu((v) => !v)}
+                                    class="h-10 w-10 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden bg-cover bg-center focus:outline-none focus:ring-2 focus:ring-primary"
+                                    style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD-WxgsuWPBjP0OP1xPeBftqYVS66rEp8xTB29WpwPzWvxYjcsALZWkeHWIqMYDnUY812qlFqBAMr8adRRKsYa67ljK9TrO-iB3lLHlSzqCv8ofNqAstmITJjCpdaMpeLbeBSxm5ZdHj026qjrfbMl5F1w6YXMyQbeSwfU80M38CqneVT-JSLySMmXaTibN6FzJhz5A5oz7E-30tuqLyZpZDZHwf6Dlq6_KatwLlKM4CysS2JKmLgeE6bCv3EENwjqvL719iKwxjD6A')"}}
+                                >
+                                </button>
+                                {showProfileMenu && (
+                                    <div class="absolute right-0 top-12 w-40 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg z-20">
+                                        <button
+                                            onClick={handleLogout}
+                                            class="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-t-xl"
+                                        >
+                                            Logout
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -156,6 +360,25 @@
         const DashboardOverview = () => {
 
         const [energy,setEnergy] = React.useState(null);
+        const [activeTab, setActiveTab] = React.useState("live");
+
+        // Fake historical + device data for prototype
+        const historicalAppliances = [
+            { name: "Air Conditioner", kwh: 185, cost: 62.9 },
+            { name: "Smart Fridge", kwh: 92, cost: 31.3 },
+            { name: "Washing Machine", kwh: 64, cost: 21.8 },
+            { name: "Dishwasher", kwh: 42, cost: 14.3 },
+            { name: "Water Heater", kwh: 55, cost: 18.7 },
+        ];
+
+        const deviceList = [
+            { name: "Air Conditioner (Living Room)", power: "2.5 kW", status: "ON" },
+            { name: "Smart Fridge", power: "0.18 kW", status: "ON" },
+            { name: "Washing Machine", power: "2.0 kW", status: "OFF" },
+            { name: "Dishwasher", power: "1.2 kW", status: "OFF" },
+            { name: "Water Heater", power: "3.0 kW", status: "ON" },
+            { name: "EV Charger", power: "7.0 kW", status: "OFF" },
+        ];
 
         React.useEffect(()=>{
 
@@ -165,16 +388,19 @@
 
         },[]);
 
+        const totalKwh = historicalAppliances.reduce((sum, a) => sum + a.kwh, 0);
+        const totalCost = historicalAppliances.reduce((sum, a) => sum + a.cost, 0);
+
         return (
         <div class="flex-1 space-y-8">
 
         <div class="flex overflow-x-auto pb-2 gap-4 border-b border-slate-200 dark:border-slate-800">
-        <button class="whitespace-nowrap pb-4 px-2 text-sm font-bold border-b-2 border-primary text-slate-900 dark:text-white transition-colors">LIVE MONITOR</button>
-        <button class="whitespace-nowrap pb-4 px-2 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">HISTORICAL</button>
-        <button class="whitespace-nowrap pb-4 px-2 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">FORECAST</button>
-        <button class="whitespace-nowrap pb-4 px-2 text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">DEVICES</button>
+        <button onClick={() => setActiveTab("live")} class={`whitespace-nowrap pb-4 px-2 text-sm font-bold border-b-2 ${activeTab === "live" ? "border-primary text-slate-900 dark:text-white" : "border-transparent text-slate-400 hover:text-slate-600"} transition-colors`}>LIVE MONITOR</button>
+        <button onClick={() => setActiveTab("historical")} class={`whitespace-nowrap pb-4 px-2 text-sm font-bold border-b-2 ${activeTab === "historical" ? "border-primary text-slate-900 dark:text-white" : "border-transparent text-slate-400 hover:text-slate-600"} transition-colors`}>HISTORICAL</button>
+        <button onClick={() => setActiveTab("devices")} class={`whitespace-nowrap pb-4 px-2 text-sm font-bold border-b-2 ${activeTab === "devices" ? "border-primary text-slate-900 dark:text-white" : "border-transparent text-slate-400 hover:text-slate-600"} transition-colors`}>DEVICES</button>
         </div>
 
+        {activeTab === "live" && (
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
 
         <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow">
@@ -242,6 +468,82 @@
         </div>
 
         </div>
+        )}
+
+        {activeTab === "historical" && (
+        <div class="space-y-6">
+        <div class="flex flex-wrap justify-between items-end gap-4">
+        <div>
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white">Historical Energy Consumption</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-sm">From month start till now (simulated data).</p>
+        </div>
+        <div class="flex gap-4">
+        <div class="text-right">
+        <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Total Consumption</p>
+        <p class="text-lg font-bold text-slate-900 dark:text-white">{totalKwh} kWh</p>
+        </div>
+        <div class="h-10 w-px bg-slate-200 dark:bg-slate-800"></div>
+        <div class="text-right">
+        <p class="text-xs uppercase tracking-wide text-slate-400 font-semibold">Total Bill</p>
+        <p class="text-lg font-bold text-slate-900 dark:text-white">₹{totalCost.toFixed(1)}</p>
+        </div>
+        </div>
+        </div>
+
+        <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+        <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-800/60">
+        <tr>
+        <th class="px-4 py-2 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Appliance</th>
+        <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Energy (kWh)</th>
+        <th class="px-4 py-2 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Bill (₹)</th>
+        </tr>
+        </thead>
+        <tbody>
+        {historicalAppliances.map((a,idx)=>(
+        <tr key={idx} class={idx % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50/60 dark:bg-slate-800/40"}>
+        <td class="px-4 py-2 font-medium text-slate-800 dark:text-slate-100">{a.name}</td>
+        <td class="px-4 py-2 text-right text-slate-700 dark:text-slate-200">{a.kwh} kWh</td>
+        <td class="px-4 py-2 text-right text-emerald-600 dark:text-emerald-400 font-semibold">₹{a.cost.toFixed(1)}</td>
+        </tr>
+        ))}
+        </tbody>
+        </table>
+        </div>
+        </div>
+        )}
+
+        {activeTab === "devices" && (
+        <div class="space-y-6">
+        <div class="flex flex-wrap justify-between items-end gap-4">
+        <div>
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white">Connected Devices</h2>
+        <p class="text-slate-500 dark:text-slate-400 text-sm">Live power rating and on/off status (simulated).</p>
+        </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {deviceList.map((d,idx)=>(
+        <div key={idx} class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-3">
+        <div class="flex justify-between items-start">
+        <div>
+        <p class="text-sm font-semibold text-slate-900 dark:text-white">{d.name}</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Power rating: {d.power}</p>
+        </div>
+        <span class={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold ${d.status === "ON" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20" : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-200"}`}>
+        <span class="material-symbols-outlined text-xs mr-1">{d.status === "ON" ? "power" : "power_off"}</span>
+        {d.status}
+        </span>
+        </div>
+        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1">
+        <span>Last updated: just now</span>
+        <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-xs text-amber-500">bolt</span>{d.status === "ON" ? "Drawing power" : "Idle"}</span>
+        </div>
+        </div>
+        ))}
+        </div>
+        </div>
+        )}
 
         </div>
         );
@@ -440,6 +742,8 @@
         const SchedulingPage = () => {
 
         const [schedule,setSchedule] = React.useState([]);
+        const [aiRec, setAiRec] = React.useState(null);
+        const [aiMessage, setAiMessage] = React.useState("");
 
         React.useEffect(()=>{
 
@@ -447,7 +751,35 @@
         .then(res=>res.json())
         .then(data=>setSchedule(data));
 
+        fetch("http://127.0.0.1:8001/ai-recommendation")
+        .then(res=>res.json())
+        .then(data=>{ if (data && data.alert) setAiRec(data); })
+        .catch(()=>{});
+
         },[]);
+
+        const handleApprove = () => {
+        if (!aiRec) return;
+        setAiMessage("");
+        fetch("http://127.0.0.1:8001/execute-command",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({device:aiRec.device,action:aiRec.action})
+        })
+        .then(res=>res.json())
+        .then(data=>{
+        const msg = data && data.message ? data.message : `Command successfully sent to ${aiRec.device}.`;
+        setAiMessage(msg);
+        })
+        .catch(()=>{
+        setAiMessage(`Command successfully sent to ${aiRec.device}.`);
+        });
+        };
+
+        const handleIgnore = () => {
+        setAiRec(null);
+        setAiMessage("Recommendation ignored.");
+        };
 
         return (
 
@@ -456,6 +788,36 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
         <div class="lg:col-span-8 space-y-8">
+
+        {aiRec && (
+        <div class="rounded-2xl border border-primary/30 bg-primary/5 dark:bg-primary/10 p-5 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-start gap-3">
+        <div class="mt-1 h-9 w-9 rounded-full bg-primary text-white flex items-center justify-center shadow-primary/40 shadow-md">
+        <span class="material-symbols-outlined text-xl">auto_awesome</span>
+        </div>
+        <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-primary mb-1">AI Energy Optimization Recommendation</p>
+        <p class="text-sm font-semibold text-slate-900 dark:text-white">Device: {aiRec.device}</p>
+        <p class="text-xs text-slate-600 dark:text-slate-300 mt-1">Reason: {aiRec.reason}</p>
+        <p class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">Estimated Savings: {aiRec.estimated_savings}</p>
+        </div>
+        </div>
+        <div class="flex gap-2 justify-end">
+        <button onClick={handleIgnore} class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800">
+        Ignore
+        </button>
+        <button onClick={handleApprove} class="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold shadow-md shadow-primary/30 hover:bg-primary/90">
+        Approve Action
+        </button>
+        </div>
+        </div>
+        )}
+
+        {aiMessage && (
+        <div class="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2">
+        {aiMessage}
+        </div>
+        )}
 
         <div class="flex items-center justify-between mb-6">
         <h2 class="text-2xl font-bold text-slate-900 dark:text-white">Recommended Timeline</h2>
@@ -640,15 +1002,38 @@
 
             const speak = (text) => {
                 setIsSpeaking(true);
-                if (typeof speechSynthesis !== "undefined") {
+                if (typeof speechSynthesis === "undefined") {
+                    setIsSpeaking(false);
+                    return;
+                }
+                try {
                     speechSynthesis.cancel();
                     const speech = new SpeechSynthesisUtterance(text);
                     speech.rate = 0.95;
                     speech.pitch = 1;
-                    speech.lang = langToSpeechCode[language] || "en-IN";
+
+                    // Pick best available voice for selected language, fall back gracefully
+                    let targetLang = langToSpeechCode[language] || "en-IN";
+                    try {
+                        const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+                        if (voices && voices.length) {
+                            const exact = voices.find(v => v.lang === targetLang);
+                            const baseCode = targetLang.split("-")[0];
+                            const base = voices.find(v => v.lang && v.lang.startsWith(baseCode));
+                            const english = voices.find(v => v.lang && v.lang.toLowerCase().startsWith("en"));
+                            const chosen = exact || base || english || voices[0];
+                            if (chosen && chosen.lang) {
+                                targetLang = chosen.lang;
+                            }
+                        }
+                    } catch (_) {}
+
+                    speech.lang = targetLang;
                     speech.onend = () => setIsSpeaking(false);
+                    speech.onerror = () => setIsSpeaking(false);
                     speechSynthesis.speak(speech);
-                } else {
+                } catch (e) {
+                    console.error("TTS error:", e);
                     setIsSpeaking(false);
                 }
             };
@@ -779,35 +1164,44 @@
             );
         };
 
-        const App = () => {
+        const AppLayout = () => {
+            const location = useLocation();
+            const isLogin = location.pathname === "/login";
             return (
-                <MemoryRouter>
-                    <div class="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
-                        <Header />
-                        <div class="flex-1 flex flex-col lg:flex-row max-w-[1600px] mx-auto w-full p-4 lg:p-8 gap-8">
-                            <Sidebar />
-                            <main class="flex-1 overflow-y-auto no-scrollbar">
-                                <Routes>
-                                    <Route path="/" element={<DashboardOverview />} />
-                                    <Route path="/analytics" element={<AnalyticsPage />} />
-                                    <Route path="/forecast" element={<ForecastPage />} />
-                                    <Route path="/scheduling" element={<SchedulingPage />} />
-                                    <Route path="/tariffs" element={<TariffsPage />} />
-                                    <Route path="/assistant" element={<AssistantPage />} />
-                                    <Route path="/settings" element={<div className="p-10 text-center text-slate-500">Settings Module Placeholder</div>} />
-                                </Routes>
-                            </main>
-                        </div>
-                        {/* Mobile Action Button */}
+                <div class="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+                    {!isLogin && <Header />}
+                    <div class={`flex-1 ${isLogin ? "" : "flex flex-col lg:flex-row max-w-[1600px] mx-auto w-full p-4 lg:p-8 gap-8"}`}>
+                        {!isLogin && <Sidebar />}
+                        <main class={isLogin ? "flex-1" : "flex-1 overflow-y-auto no-scrollbar"}>
+                            <Routes>
+                                <Route path="/login" element={<LoginPage />} />
+                                <Route path="/" element={<ProtectedRoute element={<DashboardOverview />} />} />
+                                <Route path="/analytics" element={<ProtectedRoute element={<AnalyticsPage />} />} />
+                                <Route path="/forecast" element={<ProtectedRoute element={<ForecastPage />} />} />
+                                <Route path="/scheduling" element={<ProtectedRoute element={<SchedulingPage />} />} />
+                                <Route path="/tariffs" element={<ProtectedRoute element={<TariffsPage />} />} />
+                                <Route path="/assistant" element={<ProtectedRoute element={<AssistantPage />} />} />
+                                <Route path="/settings" element={<ProtectedRoute element={<div className="p-10 text-center text-slate-500">Settings Module Placeholder</div>} />} />
+                                <Route path="*" element={<Navigate to="/" replace />} />
+                            </Routes>
+                        </main>
+                    </div>
+                    {!isLogin && (
                         <div class="fixed bottom-6 right-6 lg:hidden">
                             <button class="h-14 w-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center">
                                 <span class="material-symbols-outlined text-3xl">add</span>
                             </button>
                         </div>
-                    </div>
-                </MemoryRouter>
+                    )}
+                </div>
             );
         };
+
+        const App = () => (
+            <MemoryRouter>
+                <AppLayout />
+            </MemoryRouter>
+        );
 
         const root = createRoot(document.getElementById('root'));
         root.render(<App />);

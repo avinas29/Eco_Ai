@@ -5,6 +5,8 @@ Smart Energy Management System for households with solar and smart meters.
 
 from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from datetime import datetime
 
 from backend.services.energy_service import get_live_energy
 from backend.model.demand_forecast import get_next_day_demand_forecast
@@ -22,6 +24,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class ExecuteCommandRequest(BaseModel):
+    device: str
+    action: str
 
 # -------------------------
 # Health / Home
@@ -103,3 +110,55 @@ def tariff_prices():
     path = Path(__file__).resolve().parent / "data" / "tariffs.csv"
     df = pd.read_csv(path)
     return {"tariffs": df[["hour", "price_per_kwh"]].to_dict(orient="records")}
+
+
+# -------------------------
+# AI Recommendation & IoT Command Simulation
+# -------------------------
+
+
+def send_command_to_iot(device: str, action: str) -> dict:
+    """
+    Simulate sending a command to an IoT device.
+
+    Future implementation:
+    - send command to Azure IoT Hub
+    - using cloud-to-device messaging
+    """
+    # For now we just simulate success.
+    return {
+        "status": "success",
+        "message": f"Command sent to device {device} with action '{action}'",
+        "device": device,
+        "action": action,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+    }
+
+
+@app.get("/ai-recommendation")
+def ai_recommendation():
+    """
+    Returns a simulated AI recommendation for energy optimization.
+    """
+    # Static example for prototype; in real system this would be dynamic.
+    return {
+        "id": 1,
+        "alert": True,
+        "device": "AC",
+        "action": "turn_off",
+        "reason": "AC idle during peak tariff hours",
+        "estimated_savings": "₹18",
+    }
+
+
+@app.post("/execute-command")
+def execute_command(cmd: ExecuteCommandRequest):
+    """
+    Execute an IoT command (simulated) for a given device and action.
+    """
+    result = send_command_to_iot(cmd.device, cmd.action)
+    # Match the expected frontend contract
+    return {
+        "status": result.get("status", "success"),
+        "message": result.get("message", f"Command sent to device {cmd.device}"),
+    }

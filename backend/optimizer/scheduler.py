@@ -50,7 +50,7 @@ def optimize_schedule(
 
     # Build tariff by hour (0-23)
     tariff_by_hour = {int(t["hour"]): float(t["price_per_kwh"]) for t in tariffs}
-
+ 
     schedule = []
 
     for app in appliances:
