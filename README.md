@@ -1,47 +1,133 @@
-# Eco_Ai
+# Eco_Smart AI ⚡
 
 ## Overview
-Eco_Ai is a project designed to leverage artificial intelligence to promote environmental sustainability. The goal of this project is to utilize data-driven insights to aid in conservation efforts, reduce waste, and improve energy efficiency.
+Eco_Smart AI is an intelligent energy management system that leverages AI to optimize electricity usage in smart homes. The system uses real-time data, predictive analytics, and intelligent scheduling to reduce energy costs and improve sustainability.
 
-## Features
-- **AI-Powered Conservation Insights**: Uses AI algorithms to analyze environmental data and provide actionable insights.
-- **Data Visualization**: Interactive dashboards to visualize data trends and statistics.
-- **Sustainability Recommendations**: Personalized recommendations for reducing carbon footprint based on user data.
+It is designed as a prototype for AI-driven energy optimization, integrating concepts like smart meters, solar forecasting, and automated appliance scheduling.
 
-## Installation
-To get started with Eco_Ai, follow these steps:
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/avinas29/Eco_Ai.git
-   ```
-2. Navigate into the project directory:
-   ```bash
-   cd Eco_Ai
-   ```
-3. Install the required dependencies:
-   ```bash
-   npm install
-   ```
+---
 
-## Usage
-1. Start the application:
-   ```bash
-   npm start
-   ```
-2. Access the application in your browser at `http://localhost:3000`.
+## 🚀 Features
 
-## Contributing
-Contributions are welcome! Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information.
+### ⚡ Live Energy Monitoring
+- Tracks real-time:
+  - Solar generation
+  - Home consumption
+  - Grid export
+  - Battery status
 
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### 📊 AI Forecasting
+- Predicts future electricity demand
+- Estimates solar energy generation based on patterns
 
-## Acknowledgements
-- Thanks to all the contributors who help make Eco_Ai a success!
-- Special thanks to the AI research community for their invaluable insights and tools that make this project possible. 
+### 🧠 Smart Scheduling
+- Suggests optimal time to run appliances
+- Uses tariff pricing + solar availability
 
-## Contact
-For inquiries, please reach out to avinas29@example.com.
+### 💰 Cost Optimization
+- Helps reduce electricity bills using Time-of-Day (ToD) pricing
 
+### 🤖 AI Assistant (Voice Enabled)
+- Answers user queries about energy usage
+- Provides smart recommendations
+- Supports voice output (prototype)
+
+---
+
+## 🛠 Tech Stack
+
+- Frontend: HTML + React (CDN) + Tailwind CSS  
+- Backend: FastAPI (Python)  
+- Data Processing: Pandas, NumPy  
+- Machine Learning: Basic forecasting models  
+- Voice: Browser Speech API (prototype for Azure Speech)
+
+---
+
+## 📂 Project Structure
+
+backend/
+├── data/
+│   ├── appliances.csv
+│   ├── smart_meter.csv
+│   └── tariffs.csv
+│
+├── model/
+│   ├── demand_forecast.py
+│   └── solar_forecast.py
+│
+├── optimizer/
+│   └── scheduler.py
+│
+├── services/
+│   ├── analytics_service.py
+│   ├── assistant_service.py
+│   └── energy_service.py
+│
+└── main.py
+
+---
+
+## ⚙️ Installation
+
+### 1. Clone the repository
+git clone https://github.com/avinas29/Eco_Ai.git
+cd Eco_Ai
+
+### 2. Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+### 3. Install dependencies
+pip install fastapi uvicorn pandas numpy scikit-learn
+
+---
+
+## ▶️ Running the Project
+
+### Start Backend
+uvicorn backend.main:app --reload --port 8001
+
+### Run Frontend
+Open index.html in your browser
+
+---
+
+## 🔗 API Endpoints
+
+- /energy/live → Real-time energy data  
+- /energy/forecast → Demand & solar prediction  
+- /schedule/optimize → Appliance scheduling  
+- /assistant/query → AI assistant responses  
+
+---
+
+## 🌍 Future Enhancements
+
+- Azure Maps API → Weather-based solar prediction  
+- Azure IoT Hub → Smart meter integration  
+- Azure Speech API → Multilingual voice assistant  
+
+---
+
+## 🤝 Contributing
+Contributions are welcome! Feel free to improve models, UI, or integrations.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
+
+---
+
+## 🙌 Acknowledgements
+- Microsoft AI Hackathon inspiration  
+- Open-source AI and energy research community  
+
+---
+
+## 📬 Contact
+Avinash Bishnoi  
+IIT Guwahati  
 ## Last Updated
 This README was last updated on 2026-03-20.
